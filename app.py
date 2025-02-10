@@ -2,6 +2,7 @@ from flask import Flask, render_template, jsonify
 import numpy as np
 from scipy.signal import find_peaks, butter, filtfilt
 import os
+
 import time
 
 app = Flask(__name__)
@@ -12,9 +13,11 @@ class PPGBasedBPEstimator:
         self.buffer_size = 300  # 10 seconds of data
         
     def bandpass_filter(self, data, lowcut=0.5, highcut=5.0, order=5):
+
         if len(data) <= 33:
             return data
-            
+        if len(data) <= 33:  # Ensure the signal is longer than the filter's padding length
+            return data  # Return the original signal if it's too short
         nyquist = 0.5 * self.frame_rate
         low = lowcut / nyquist
         high = highcut / nyquist
@@ -60,10 +63,32 @@ class PPGBasedBPEstimator:
     
     def run(self):
         try:
+
             # Simulate processing delay
             time.sleep(5)
             
             ppg_signal = self.generate_sample_ppg()
+
+            while len(self.ppg_buffer) < self.buffer_size:
+                ret, frame = cap.read()
+                if not ret:
+                    break
+                    
+                ppg_value = self.process_frame(frame)
+                self.ppg_buffer.append(ppg_value)
+                
+                if cv2.waitKey(1) & 0xFF == ord('q'):
+                    break
+                    
+            cap.release()
+            cv2.destroyAllWindows()
+
+            ppg_signal = np.array(self.ppg_buffer)
+            print(f"Length of PPG signal: {len(ppg_signal)}")  # Debugging
+            
+            if len(ppg_signal) <= 33:
+                return {"error": "Insufficient data for filtering"}
+  
             filtered_signal = self.bandpass_filter(ppg_signal)
             features = self.extract_features(filtered_signal)
             
@@ -91,5 +116,9 @@ def estimate():
     return jsonify(result)
 
 if __name__ == '__main__':
+  ]
     port = int(os.getenv('PORT', 10000))
     app.run(host='0.0.0.0', port=port)
+    port = int(os.getenv('PORT', 10000))  # Use PORT environment variable or default to 10000
+    app.run(host='0.0.0.0', port=port)
+
