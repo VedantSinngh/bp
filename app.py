@@ -1,7 +1,7 @@
-# app.py
-from flask import Flask, render_template, request, jsonify
+from flask import Flask, render_template, jsonify, request
 import cv2
 import numpy as np
+import json
 from scipy.signal import find_peaks, butter, filtfilt
 
 app = Flask(__name__)
@@ -10,9 +10,9 @@ class PPGBasedBPEstimator:
     def __init__(self):
         self.frame_rate = 30
         self.roi_size = 100
-        self.buffer_size = 300
+        self.buffer_size = 300  # 10 seconds of data at 30 fps
         self.ppg_buffer = []
-    
+        
     def bandpass_filter(self, data, lowcut=0.5, highcut=5.0, order=5):
         nyquist = 0.5 * self.frame_rate
         low = lowcut / nyquist
@@ -55,9 +55,9 @@ class PPGBasedBPEstimator:
     
     def process_frame(self, frame):
         gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
-        h, w = gray.shape
-        roi = gray[h//2 - self.roi_size//2:h//2 + self.roi_size//2,
-                   w//2 - self.roi_size//2:w//2 + self.roi_size//2]
+        height, width = gray.shape
+        roi = gray[height//2 - self.roi_size//2:height//2 + self.roi_size//2,
+                  width//2 - self.roi_size//2:width//2 + self.roi_size//2]
         return np.mean(roi)
     
     def run(self):
@@ -67,9 +67,16 @@ class PPGBasedBPEstimator:
                 ret, frame = cap.read()
                 if not ret:
                     break
+                    
                 ppg_value = self.process_frame(frame)
                 self.ppg_buffer.append(ppg_value)
-            
+                
+                if cv2.waitKey(1) & 0xFF == ord('q'):
+                    break
+                    
+            cap.release()
+            cv2.destroyAllWindows()
+
             ppg_signal = np.array(self.ppg_buffer)
             filtered_signal = self.bandpass_filter(ppg_signal)
             features = self.extract_features(filtered_signal)
@@ -83,25 +90,23 @@ class PPGBasedBPEstimator:
                 }
                 return result
             return {"error": "Unable to extract features"}
+            
+        except Exception as e:
+            return {"error": str(e)}
         
         finally:
             cap.release()
+            cv2.destroyAllWindows()
 
 @app.route('/')
-def home():
+def index():
     return render_template('index.html')
 
-@app.route('/measure', methods=['POST'])
-def measure():
-    try:
-        estimator = PPGBasedBPEstimator()
-        result = estimator.run()
-        return jsonify(result)
-    except Exception as e:
-        # Log the error for debugging
-        app.logger.error(f"Error in /measure: {str(e)}")
-        # Return a JSON error response
-        return jsonify({"error": str(e)}), 500
+@app.route('/estimate', methods=['POST'])
+def estimate():
+    estimator = PPGBasedBPEstimator()
+    result = estimator.run()
+    return jsonify(result)
 
 if __name__ == '__main__':
     app.run(debug=True)
