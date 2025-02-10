@@ -15,6 +15,9 @@ class PPGBasedBPEstimator:
         self.ppg_buffer = []
         
     def bandpass_filter(self, data, lowcut=0.5, highcut=5.0, order=5):
+        if len(data) <= 33:  # Ensure the signal is longer than the filter's padding length
+            return data  # Return the original signal if it's too short
+        
         nyquist = 0.5 * self.frame_rate
         low = lowcut / nyquist
         high = highcut / nyquist
@@ -79,6 +82,11 @@ class PPGBasedBPEstimator:
             cv2.destroyAllWindows()
 
             ppg_signal = np.array(self.ppg_buffer)
+            print(f"Length of PPG signal: {len(ppg_signal)}")  # Debugging
+            
+            if len(ppg_signal) <= 33:
+                return {"error": "Insufficient data for filtering"}
+            
             filtered_signal = self.bandpass_filter(ppg_signal)
             features = self.extract_features(filtered_signal)
             
