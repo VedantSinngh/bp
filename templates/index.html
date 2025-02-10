@@ -3,50 +3,119 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>PPG Blood Pressure Monitor</title>
-    <script src="https://cdn.tailwindcss.com"></script>
+    <title>PPG BP Estimation</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+            text-align: center;
+            padding: 2rem;
+            background-color: #f8f9fa;
+            color: #2c3e50;
+            min-height: 100vh;
+            line-height: 1.6;
+        }
+
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 2rem;
+            background: white;
+            border-radius: 12px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+
+        h1 {
+            font-size: 2.5rem;
+            margin-bottom: 1.5rem;
+            color: #2c3e50;
+        }
+
+        .description {
+            margin-bottom: 2rem;
+            color: #666;
+        }
+
+        .button-container {
+            display: flex;
+            gap: 1rem;
+            justify-content: center;
+            margin-bottom: 2rem;
+        }
+
+        button {
+            padding: 0.75rem 1.5rem;
+            font-size: 1rem;
+            font-weight: 600;
+            background-color: #4CAF50;
+            color: white;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+
+        button:hover {
+            background-color: #45a049;
+            transform: translateY(-1px);
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+        }
+
+        pre {
+            background: #f8f9fa;
+            padding: 1.5rem;
+            border-radius: 8px;
+            width: 100%;
+            overflow-x: auto;
+            font-family: 'Consolas', 'Monaco', monospace;
+            font-size: 0.9rem;
+            line-height: 1.4;
+            text-align: left;
+            box-shadow: inset 0 2px 4px rgba(0,0,0,0.1);
+        }
+
+        @media (max-width: 768px) {
+            .container {
+                padding: 1rem;
+            }
+
+            h1 {
+                font-size: 2rem;
+            }
+
+            .button-container {
+                flex-direction: column;
+            }
+
+            button {
+                width: 100%;
+            }
+        }
+    </style>
 </head>
-<body class="bg-gray-100 min-h-screen">
-    <div class="container mx-auto px-4 py-8">
-        <div class="max-w-md mx-auto bg-white rounded-xl shadow-md overflow-hidden md:max-w-2xl">
-            <div class="p-8">
-                <h1 class="text-3xl font-bold text-gray-800 mb-6 text-center">
-                    PPG Blood Pressure Monitor
-                </h1>
-                
-                <div class="mb-8 text-center">
-                    <div id="video-feed" class="bg-gray-200 rounded-lg mx-auto mb-4">
-                        <video id="webcam" autoplay playsinline class="rounded-lg"></video>
-                    </div>
-                    
-                    <button onclick="startMeasurement()" 
-                            id="measure-btn"
-                            class="bg-blue-500 hover:bg-blue-600 text-white font-bold py-3 px-8 rounded-lg 
-                                   transition-all duration-300 transform hover:scale-105">
-                        Start Measurement
-                    </button>
-                </div>
+<body>
+    <h1>PPG-Based Blood Pressure Estimator</h1>
+    <button onclick="startEstimation()">Start Estimation</button>
+    <pre id="result">Press the button to estimate blood pressure...</pre>
 
-                <div id="results" class="hidden bg-gray-50 p-6 rounded-lg">
-                    <h2 class="text-xl font-semibold text-gray-700 mb-4">Measurement Results</h2>
-                    <div class="space-y-3">
-                        <p class="text-gray-600">
-                            Systolic: <span id="systolic" class="font-medium">--</span> mmHg
-                        </p>
-                        <p class="text-gray-600">
-                            Diastolic: <span id="diastolic" class="font-medium">--</span> mmHg
-                        </p>
-                        <p class="text-gray-600">
-                            Heart Rate: <span id="heart-rate" class="font-medium">--</span> BPM
-                        </p>
-                    </div>
-                </div>
-
-                <div id="error" class="hidden mt-4 p-4 bg-red-100 text-red-700 rounded-lg"></div>
-            </div>
-        </div>
-    </div>
-
-    <script src="{{ url_for('static', filename='js/script.js') }}"></script>
+    <script>
+        function startEstimation() {
+            document.getElementById("result").innerText = "Processing... Please wait...";
+            fetch('/estimate', { method: 'POST' })
+                .then(response => response.json())
+                .then(data => {
+                    document.getElementById('result').innerText = JSON.stringify(data, null, 4);
+                })
+                .catch(error => {
+                    document.getElementById('result').innerText = "Error: " + error;
+                });
+        }
+    </script>
 </body>
 </html>
